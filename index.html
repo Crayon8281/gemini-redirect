@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מעביר לסוכן...</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0a0a2e 0%, #1a1a4e 30%, #2d1b69 60%, #1a0a3e 100%);
+            color: #ffffff;
+            direction: rtl;
+            overflow: hidden;
+        }
+
+        .bg-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .particle:nth-child(1) { width: 80px; height: 80px; top: 10%; left: 20%; animation-delay: 0s; }
+        .particle:nth-child(2) { width: 120px; height: 120px; top: 60%; left: 70%; animation-delay: 2s; }
+        .particle:nth-child(3) { width: 60px; height: 60px; top: 30%; left: 80%; animation-delay: 4s; }
+        .particle:nth-child(4) { width: 100px; height: 100px; top: 70%; left: 10%; animation-delay: 1s; }
+        .particle:nth-child(5) { width: 50px; height: 50px; top: 50%; left: 50%; animation-delay: 3s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) scale(1); opacity: 0.3; }
+            50% { transform: translateY(-30px) scale(1.1); opacity: 0.6; }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 40px 30px;
+            max-width: 460px;
+            width: 90%;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 50px 35px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .agent-emoji {
+            font-size: 56px;
+            margin-bottom: 16px;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .agent-name {
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #a78bfa, #818cf8, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .agent-subtitle {
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 35px;
+        }
+
+        .spinner-container {
+            margin: 30px auto;
+            position: relative;
+            width: 60px;
+            height: 60px;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #818cf8;
+            border-right: 3px solid #a78bfa;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .status-text {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 20px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        .btn-open {
+            display: none;
+            margin-top: 30px;
+            padding: 16px 40px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7);
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+            font-family: inherit;
+            direction: rtl;
+        }
+
+        .btn-open:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(99, 102, 241, 0.5);
+        }
+
+        .btn-open:active {
+            transform: translateY(0);
+        }
+
+        .btn-open.show {
+            display: inline-block;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .tip {
+            display: none;
+            margin-top: 20px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.4);
+            line-height: 1.6;
+        }
+
+        .tip.show {
+            display: block;
+            animation: fadeInUp 0.5s ease 0.2s both;
+        }
+
+        .error-container {
+            display: none;
+        }
+
+        .error-container.show {
+            display: block;
+        }
+
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .error-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #f87171;
+        }
+
+        .error-text {
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.6;
+        }
+
+        .progress-dots {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            animation: dotPulse 1.5s ease-in-out infinite;
+        }
+
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes dotPulse {
+            0%, 100% { background: rgba(255, 255, 255, 0.3); transform: scale(1); }
+            50% { background: #818cf8; transform: scale(1.3); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div id="redirect-state">
+                <div class="agent-emoji" id="agent-emoji">🤖</div>
+                <div class="agent-name" id="agent-name">סוכן AI</div>
+                <div class="agent-subtitle" id="agent-subtitle">מכין את הסוכן עבורך</div>
+
+                <div class="spinner-container">
+                    <div class="spinner"></div>
+                </div>
+
+                <div class="status-text">...מעביר אותך לסוכן</div>
+
+                <div class="progress-dots">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+
+                <button class="btn-open" id="btn-open" onclick="openAgent()">🔗 פתח את הסוכן</button>
+
+                <div class="tip" id="tip">
+                    💡 אם הסוכן לא נפתח אוטומטית, לחץ על הכפתור למעלה
+                </div>
+            </div>
+
+            <div class="error-container" id="error-state">
+                <div class="error-icon">😕</div>
+                <div class="error-title">סוכן לא נמצא</div>
+                <div class="error-text">
+                    הלינק לא מכיל מזהה סוכן תקין.<br>
+                    אנא בדוק את הקישור שקיבלת ונסה שוב.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // AGENT CONFIGURATION - Easy to add new agents
+        // To add a new agent, just add a new entry here:
+        // key: { name: "Name", subtitle: "תיאור", emoji: "🎯", url: "https://..." }
+        // ============================================
+        const AGENTS = {
+            bio: {
+                name: "BioExpress",
+                subtitle: "ביו במהירות",
+                emoji: "⚡",
+                url: "https://gemini.google.com/gem/1eMUaHeB96TMO9AewHioYIz7prrniQcwa"
+            },
+            intro: {
+                name: "FirstImpact",
+                subtitle: "פוסט היכרות",
+                emoji: "💥",
+                url: "https://gemini.google.com/gem/1LinTmvBwOA9oPs4Sr5x76C49ejcpFULq"
+            },
+            groups: {
+                name: "GroupLink",
+                subtitle: "חיבור לקבוצות",
+                emoji: "🔗",
+                url: "https://gemini.google.com/gem/1CUdYRdxB4Ehb6rPSR1D8NmUJzdL95p85"
+            },
+            friends: {
+                name: "NetHunter",
+                subtitle: "איתור חברים רלוונטיים",
+                emoji: "🎯",
+                url: "https://gemini.google.com/gem/1zYM8b94DnR1FfbQgXNU72ve5toAIv05B"
+            },
+            authority: {
+                name: "AuthorityPost",
+                subtitle: "פוסט ביסוס מעמד",
+                emoji: "👑",
+                url: "https://gemini.google.com/gem/1IGPtTugc5B9tBnWO4oHFgsq2ofhyaUC3"
+            },
+            launch: {
+                name: "LaunchCraft",
+                subtitle: "נוסח השקת שירות",
+                emoji: "🚀",
+                url: "https://gemini.google.com/gem/8188d71c7ff1"
+            },
+            sales: {
+                name: "SalesCoach",
+                subtitle: "אימון מכירות",
+                emoji: "💰",
+                url: "https://gemini.google.com/gem/1i3p_RvRorZaALPg8yYjqv_r-McEGhcSW"
+            }
+        };
+
+        const params = new URLSearchParams(window.location.search);
+        const agentKey = params.get('agent');
+        const agent = AGENTS[agentKey];
+
+        let targetUrl = null;
+
+        if (agent) {
+            document.getElementById('agent-emoji').textContent = agent.emoji;
+            document.getElementById('agent-name').textContent = agent.name;
+            document.getElementById('agent-subtitle').textContent = agent.subtitle;
+            document.title = agent.name + ' - ' + agent.subtitle;
+            targetUrl = agent.url;
+            startRedirect();
+        } else {
+            document.getElementById('redirect-state').style.display = 'none';
+            document.getElementById('error-state').classList.add('show');
+        }
+
+        function startRedirect() {
+            const isAndroid = /android/i.test(navigator.userAgent);
+            const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+            const isWhatsApp = /whatsapp/i.test(navigator.userAgent);
+
+            if (isWhatsApp) {
+                if (isAndroid) {
+                    setTimeout(() => {
+                        const intentUrl = 'intent://' + targetUrl.replace('https://', '') +
+                            '#Intent;scheme=https;package=com.android.chrome;end';
+                        window.location.href = intentUrl;
+                    }, 800);
+
+                    setTimeout(() => {
+                        const genericIntent = 'intent://' + targetUrl.replace('https://', '') +
+                            '#Intent;scheme=https;action=android.intent.action.VIEW;end';
+                        window.location.href = genericIntent;
+                    }, 2000);
+
+                } else if (isIOS) {
+                    setTimeout(() => {
+                        window.location.href = targetUrl;
+                    }, 800);
+
+                    setTimeout(() => {
+                        const chromeUrl = 'googlechromes://' + targetUrl.replace('https://', '');
+                        window.location.href = chromeUrl;
+                    }, 2000);
+                }
+
+                setTimeout(() => {
+                    showFallback();
+                }, 2500);
+
+            } else {
+                setTimeout(() => {
+                    window.location.href = targetUrl;
+                }, 1200);
+
+                setTimeout(() => {
+                    showFallback();
+                }, 3000);
+            }
+        }
+
+        function showFallback() {
+            document.getElementById('btn-open').classList.add('show');
+            document.getElementById('tip').classList.add('show');
+        }
+
+        function openAgent() {
+            if (!targetUrl) return;
+
+            const isAndroid = /android/i.test(navigator.userAgent);
+
+            if (isAndroid) {
+                const intentUrl = 'intent://' + targetUrl.replace('https://', '') +
+                    '#Intent;scheme=https;action=android.intent.action.VIEW;end';
+                window.location.href = intentUrl;
+
+                setTimeout(() => {
+                    window.open(targetUrl, '_system');
+                }, 500);
+
+                setTimeout(() => {
+                    window.location.href = targetUrl;
+                }, 1000);
+            } else {
+                const w = window.open(targetUrl, '_blank');
+                if (!w) {
+                    window.location.href = targetUrl;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
