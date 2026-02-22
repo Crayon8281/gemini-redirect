@@ -30,31 +30,41 @@
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
         }
         .subtitle { font-size: 15px; color: rgba(255,255,255,0.5); margin-bottom: 25px; }
-        .desc { font-size: 16px; color: rgba(255,255,255,0.7); margin-bottom: 25px; line-height: 1.5; }
 
-        /* Main CTA - <a> tag styled as button (critical for iOS Universal Links!) */
-        .btn-app {
-            display: inline-block; width: 85%; padding: 16px 20px; font-size: 18px;
+        /* Auto-redirect state */
+        .auto-state { margin-bottom: 20px; }
+        .spinner {
+            width: 44px; height: 44px;
+            border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #818cf8;
+            border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 15px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .auto-text { font-size: 16px; color: rgba(255,255,255,0.7); animation: pulse 1.5s ease-in-out infinite; }
+        @keyframes pulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+        /* Buttons state */
+        .buttons-state { display: none; }
+        .desc { font-size: 15px; color: rgba(255,255,255,0.6); margin-bottom: 22px; line-height: 1.5; }
+
+        .btn-main {
+            display: inline-block; width: 85%; padding: 16px 20px; font-size: 17px;
             font-weight: 700; color: #fff; text-decoration: none;
             background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            border-radius: 14px;
-            box-shadow: 0 8px 25px rgba(99,102,241,0.4);
+            border-radius: 14px; box-shadow: 0 8px 25px rgba(99,102,241,0.4);
             font-family: inherit; transition: transform 0.15s;
         }
-        .btn-app:active { transform: scale(0.97); }
+        .btn-main:active { transform: scale(0.97); }
 
         .btn-secondary {
             display: inline-block; width: 85%; margin-top: 12px; padding: 13px 20px;
-            font-size: 15px; font-weight: 500; color: #a78bfa; text-decoration: none;
+            font-size: 14px; font-weight: 500; color: #a78bfa; text-decoration: none;
             background: rgba(255,255,255,0.08);
             border: 1px solid rgba(167,139,250,0.3);
             border-radius: 12px; font-family: inherit;
         }
         .btn-secondary:active { transform: scale(0.97); }
 
-        .tip {
-            margin-top: 20px; font-size: 12px; color: rgba(255,255,255,0.3); line-height: 1.6;
-        }
+        .tip { margin-top: 18px; font-size: 12px; color: rgba(255,255,255,0.3); line-height: 1.6; }
         .error { color: #f87171; }
     </style>
 </head>
@@ -64,21 +74,22 @@
             <div class="emoji" id="emoji">🤖</div>
             <div class="name" id="name">סוכן AI</div>
             <div class="subtitle" id="subtitle"></div>
-            <div class="desc">👆 לחץ על הכפתור לפתיחה באפליקציה</div>
 
-            <!-- CRITICAL: This is an <a> tag, NOT a button. iOS Universal Links
-                 ONLY work from direct user taps on <a href> elements.
-                 JavaScript redirects (window.location) DO NOT trigger Universal Links. -->
-            <a class="btn-app" id="btn-app" href="#">🚀 פתח באפליקציית Gemini</a>
+            <!-- Auto-redirect state (shown first) -->
+            <div class="auto-state" id="auto-state">
+                <div class="spinner"></div>
+                <div class="auto-text">...פותח את הסוכן</div>
+            </div>
 
-            <br>
-            <a class="btn-secondary" id="btn-browser" href="#">🌐 פתח בדפדפן</a>
+            <!-- Manual buttons state (shown as fallback) -->
+            <div class="buttons-state" id="buttons-state">
+                <div class="desc" id="desc"></div>
 
-            <br>
-            <a class="btn-secondary" id="btn-store" href="#">📲 עדיין לא מותקנת? התקן כאן</a>
+                <a class="btn-main" id="btn-main" href="#">🚀 פתח את הסוכן</a>
+                <br>
+                <a class="btn-secondary" id="btn-alt" href="#">פתח בדרך אחרת</a>
 
-            <div class="tip" id="tip">
-                💡 לחוויה הטובה ביותר, ודא שאפליקציית Gemini מותקנת
+                <div class="tip" id="tip"></div>
             </div>
         </div>
         <div id="err" style="display:none">
@@ -90,7 +101,7 @@
 
     <script>
         // ============================================
-        // AGENTS CONFIG
+        // AGENTS CONFIG - add new agents here
         // ============================================
         var AGENTS = {
             bio:       { name: "BioExpress",    subtitle: "ביו במהירות",              emoji: "⚡", gem: "1eMUaHeB96TMO9AewHioYIz7prrniQcwa" },
@@ -109,44 +120,122 @@
             document.getElementById('main').style.display = 'none';
             document.getElementById('err').style.display = 'block';
         } else {
-            // Update display
             document.getElementById('emoji').textContent = agent.emoji;
             document.getElementById('name').textContent = agent.name;
             document.getElementById('subtitle').textContent = agent.subtitle;
             document.title = agent.name + ' - ' + agent.subtitle;
 
             var gemUrl = 'https://gemini.google.com/gem/' + agent.gem;
-            var _isAndroid = /android/i.test(navigator.userAgent);
-            var _isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+            var ua = navigator.userAgent;
+            var _isAndroid = /android/i.test(ua);
+            var _isIOS = /iphone|ipad|ipod/i.test(ua);
+            var _isWhatsApp = /whatsapp/i.test(ua);
 
             // =============================================
-            // Set href on <a> tags BEFORE user clicks
-            // This is THE key for iOS Universal Links!
+            // STRATEGY:
+            // 1. If in WhatsApp in-app browser -> auto-redirect to external browser with gem URL
+            // 2. If already in external browser -> auto-redirect to gem URL directly
+            // 3. Show manual buttons as fallback
             // =============================================
 
-            if (_isAndroid) {
-                // Android: intent with Gemini app package (com.google.android.apps.bard)
-                // NO browser_fallback_url = if app not found, goes to Play Store for this package
-                var intent = 'intent://gemini.google.com/gem/' + agent.gem +
-                    '#Intent;' +
-                    'scheme=https;' +
-                    'package=com.google.android.apps.bard;' +
-                    'end';
-                document.getElementById('btn-app').href = intent;
-                document.getElementById('btn-store').href = 'market://details?id=com.google.android.apps.bard';
-            } else if (_isIOS) {
-                // iOS: Direct <a href> to gemini.google.com triggers Universal Links
-                // This MUST be a real <a> tag click, NOT JavaScript redirect
-                document.getElementById('btn-app').href = gemUrl;
-                document.getElementById('btn-store').href = 'https://apps.apple.com/app/google-gemini/id6477489129';
+            if (_isWhatsApp) {
+                // === WHATSAPP IN-APP BROWSER ===
+                // Must escape to external browser first, then gem URL opens there
+                if (_isAndroid) {
+                    // Android WhatsApp: Use intent to open in Chrome with the gem URL
+                    var chromeIntent = 'intent://' + gemUrl.replace('https://', '') +
+                        '#Intent;' +
+                        'scheme=https;' +
+                        'package=com.android.chrome;' +
+                        'end';
+                    setTimeout(function() { window.location.href = chromeIntent; }, 600);
+
+                    // Fallback: generic browser intent (if Chrome not installed)
+                    setTimeout(function() {
+                        if (!document.hidden) {
+                            var genericIntent = 'intent://' + gemUrl.replace('https://', '') +
+                                '#Intent;' +
+                                'scheme=https;' +
+                                'action=android.intent.action.VIEW;' +
+                                'end';
+                            window.location.href = genericIntent;
+                        }
+                    }, 2000);
+                } else if (_isIOS) {
+                    // iOS WhatsApp: Try to open in Safari
+                    // Method 1: x-safari scheme
+                    setTimeout(function() {
+                        window.location.href = 'x-safari-' + gemUrl;
+                    }, 600);
+                    // Method 2: just navigate (sometimes works on iOS)
+                    setTimeout(function() {
+                        if (!document.hidden) {
+                            window.location.href = gemUrl;
+                        }
+                    }, 1500);
+                }
+
+                // Show buttons after 3 seconds as fallback
+                setTimeout(showButtons, 3000);
+
             } else {
-                // Desktop
-                document.getElementById('btn-app').href = gemUrl;
-                document.getElementById('btn-store').style.display = 'none';
+                // === EXTERNAL BROWSER (Chrome, Safari, etc.) ===
+                // Already in real browser - redirect directly to Gemini gem
+                setTimeout(function() {
+                    window.location.href = gemUrl;
+                }, 500);
+
+                // Show buttons after 2 seconds if still here
+                setTimeout(showButtons, 2500);
             }
 
-            // Browser fallback always goes to web version
-            document.getElementById('btn-browser').href = gemUrl;
+            // Set up button hrefs
+            setupButtons(gemUrl);
+        }
+
+        function setupButtons(gemUrl) {
+            var ua = navigator.userAgent;
+            var _isAndroid = /android/i.test(ua);
+            var _isIOS = /iphone|ipad|ipod/i.test(ua);
+
+            // Main button - always opens gem URL directly (works great in external browser)
+            document.getElementById('btn-main').href = gemUrl;
+
+            if (_isAndroid) {
+                document.getElementById('desc').textContent = '👆 לחץ לפתיחת הסוכן';
+                document.getElementById('btn-main').textContent = '🚀 פתח את הסוכן';
+
+                // Alt button: try to open in Chrome specifically
+                var chromeIntent = 'intent://' + gemUrl.replace('https://', '') +
+                    '#Intent;scheme=https;package=com.android.chrome;end';
+                document.getElementById('btn-alt').href = chromeIntent;
+                document.getElementById('btn-alt').textContent = '🌐 פתח ב-Chrome';
+
+                document.getElementById('tip').textContent = '💡 הסוכן נפתח בדפדפן - שם הוא עובד הכי טוב';
+
+            } else if (_isIOS) {
+                document.getElementById('desc').textContent = '👆 לחץ לפתיחת הסוכן';
+                document.getElementById('btn-main').textContent = '🚀 פתח את הסוכן';
+
+                // Alt button: open in Safari
+                document.getElementById('btn-alt').href = gemUrl;
+                document.getElementById('btn-alt').textContent = '🌐 פתח ב-Safari';
+
+                document.getElementById('tip').textContent = '💡 הסוכן נפתח בדפדפן - שם הוא עובד הכי טוב';
+
+            } else {
+                // Desktop
+                document.getElementById('desc').textContent = '👆 לחץ לפתיחת הסוכן';
+                document.getElementById('btn-main').textContent = '🚀 פתח את הסוכן';
+                document.getElementById('btn-alt').style.display = 'none';
+                document.getElementById('tip').textContent = '';
+            }
+        }
+
+        function showButtons() {
+            if (document.hidden) return; // Page left - redirect worked!
+            document.getElementById('auto-state').style.display = 'none';
+            document.getElementById('buttons-state').style.display = 'block';
         }
     </script>
 </body>
