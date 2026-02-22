@@ -125,11 +125,12 @@
             // =============================================
 
             if (_isAndroid) {
-                // Android: intent forces Google App (which contains Gemini) to handle the URL
+                // Android: intent with Gemini app package (com.google.android.apps.bard)
+                // NO browser_fallback_url = if app not found, goes to Play Store for this package
                 var intent = 'intent://gemini.google.com/gem/' + agent.gem +
                     '#Intent;' +
                     'scheme=https;' +
-                    'package=com.google.android.googlequicksearchbox;' +
+                    'package=com.google.android.apps.bard;' +
                     'end';
                 document.getElementById('btn-app').href = intent;
                 document.getElementById('btn-store').href = 'market://details?id=com.google.android.apps.bard';
