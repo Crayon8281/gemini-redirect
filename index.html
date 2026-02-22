@@ -13,20 +13,15 @@
             align-items: center;
             justify-content: center;
             background: linear-gradient(135deg, #0a0a2e 0%, #1a1a4e 30%, #2d1b69 60%, #1a0a3e 100%);
-            color: #fff;
-            direction: rtl;
+            color: #fff; direction: rtl;
         }
         .card {
             background: rgba(255,255,255,0.06);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 24px;
-            padding: 50px 35px;
+            border-radius: 24px; padding: 50px 35px;
             box-shadow: 0 25px 60px rgba(0,0,0,0.4);
-            text-align: center;
-            max-width: 420px;
-            width: 90%;
+            text-align: center; max-width: 420px; width: 90%;
         }
         .emoji { font-size: 56px; margin-bottom: 16px; }
         .name {
@@ -37,34 +32,31 @@
         .subtitle { font-size: 16px; color: rgba(255,255,255,0.5); margin-bottom: 30px; }
         .spinner {
             width: 50px; height: 50px;
-            border: 3px solid rgba(255,255,255,0.1);
-            border-top: 3px solid #818cf8;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 0 auto 20px;
+            border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #818cf8;
+            border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 20px;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
         .status { font-size: 17px; color: rgba(255,255,255,0.7); animation: pulse 1.5s ease-in-out infinite; }
         @keyframes pulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
         .btn {
-            display: none; margin-top: 25px; padding: 15px 36px; font-size: 17px;
+            display: none; margin-top: 20px; padding: 15px 36px; font-size: 17px;
             font-weight: 600; color: #fff;
             background: linear-gradient(135deg, #6366f1, #8b5cf6);
             border: none; border-radius: 14px; cursor: pointer;
             box-shadow: 0 8px 25px rgba(99,102,241,0.4);
-            font-family: inherit; transition: transform 0.2s;
+            font-family: inherit; width: 80%;
         }
         .btn:active { transform: scale(0.97); }
         .btn.show { display: inline-block; }
-        .store-btn {
-            display: none; margin-top: 15px; padding: 12px 30px; font-size: 15px;
+        .btn-secondary {
+            display: none; margin-top: 12px; padding: 13px 30px; font-size: 15px;
             font-weight: 500; color: #a78bfa;
             background: rgba(255,255,255,0.08);
             border: 1px solid rgba(167,139,250,0.3);
-            border-radius: 12px; cursor: pointer; font-family: inherit;
+            border-radius: 12px; cursor: pointer; font-family: inherit; width: 80%;
         }
-        .store-btn:active { transform: scale(0.97); }
-        .store-btn.show { display: inline-block; }
+        .btn-secondary:active { transform: scale(0.97); }
+        .btn-secondary.show { display: inline-block; }
         .tip { display: none; margin-top: 18px; font-size: 13px; color: rgba(255,255,255,0.35); line-height: 1.6; }
         .tip.show { display: block; }
         .error { color: #f87171; }
@@ -78,8 +70,9 @@
             <div class="subtitle" id="subtitle"></div>
             <div class="spinner" id="spinner"></div>
             <div class="status" id="status">...פותח את הסוכן</div>
-            <button class="btn" id="btn" onclick="tryOpen()">🔗 פתח באפליקציית Gemini</button>
-            <button class="store-btn" id="store-btn" onclick="openStore()">📲 להתקנת אפליקציית Gemini</button>
+            <button class="btn" id="btn1" onclick="openInApp()">🚀 פתח באפליקציית Gemini</button>
+            <button class="btn-secondary" id="btn2" onclick="openInBrowser()">🌐 פתח בדפדפן</button>
+            <button class="btn-secondary" id="btn3" onclick="openStore()">📲 התקן את Gemini</button>
             <div class="tip" id="tip"></div>
         </div>
         <div id="err" style="display:none">
@@ -91,7 +84,7 @@
 
     <script>
         // ============================================
-        // AGENTS - To add a new agent just add a line
+        // AGENTS CONFIG
         // ============================================
         var AGENTS = {
             bio:       { name: "BioExpress",    subtitle: "ביו במהירות",              emoji: "⚡", gem: "1eMUaHeB96TMO9AewHioYIz7prrniQcwa" },
@@ -126,95 +119,63 @@
 
         function startRedirect() {
             if (isAndroid()) {
-                androidOpen();
-            } else if (isIOS()) {
-                iosOpen();
-            } else {
-                // Desktop - just redirect
-                window.location.href = gemUrl();
-                return;
-            }
-            setTimeout(showFallback, 3500);
-        }
-
-        function androidOpen() {
-            // Strategy: Try intent with the REAL Gemini app package (com.google.android.apps.bard)
-            // If app not installed, browser_fallback_url sends to web version
-            var url = gemUrl();
-
-            // Method 1: Intent with Gemini app package
-            var intent = 'intent://gemini.google.com/gem/' + agent.gem +
-                '#Intent;' +
-                'scheme=https;' +
-                'package=com.google.android.apps.bard;' +
-                'S.browser_fallback_url=' + encodeURIComponent(url) + ';' +
-                'end';
-
-            // Try intent first (works in Chrome and most browsers)
-            setTimeout(function() {
-                window.location.href = intent;
-            }, 300);
-
-            // Method 2: If intent didn't work (non-Chrome browsers),
-            // try iframe trick with the same intent
-            setTimeout(function() {
-                if (!document.hidden) {
-                    var iframe = document.createElement('iframe');
-                    iframe.style.display = 'none';
-                    iframe.src = intent;
-                    document.body.appendChild(iframe);
-                    setTimeout(function() {
-                        document.body.removeChild(iframe);
-                    }, 2000);
-                }
-            }, 1500);
-        }
-
-        function iosOpen() {
-            var url = gemUrl();
-
-            // iOS: Try opening the Gemini app via Universal Link
-            // Google configured gemini.google.com as Universal Link for their app
-            // We need to use a user-initiated navigation for Universal Links to trigger
-
-            // Method: Navigate directly - if Gemini app is installed and Universal Links
-            // are configured, iOS will open the app
-            setTimeout(function() {
-                window.location.href = url;
-            }, 300);
-        }
-
-        function showFallback() {
-            // Only show if we're still on this page (app didn't open)
-            if (document.hidden) return;
-
-            document.getElementById('spinner').style.display = 'none';
-            document.getElementById('status').textContent = 'לא נפתח? נסה ידנית:';
-            document.getElementById('status').style.animation = 'none';
-            document.getElementById('status').style.opacity = '0.7';
-            document.getElementById('btn').classList.add('show');
-            document.getElementById('store-btn').classList.add('show');
-            document.getElementById('tip').innerHTML = '💡 אם האפליקציה לא מותקנת, התקן אותה ולחץ שוב על הלינק';
-            document.getElementById('tip').classList.add('show');
-        }
-
-        function tryOpen() {
-            if (isAndroid()) {
-                // On button click (user gesture) - try all methods
-                var url = gemUrl();
-
-                // Try intent with Gemini package
+                // Android: intent with Google App package (verified handler for gemini.google.com)
+                // NO browser_fallback_url - so Chrome won't silently fall back to browser
+                // If package not found -> Chrome goes to Play Store for that package
                 var intent = 'intent://gemini.google.com/gem/' + agent.gem +
                     '#Intent;' +
                     'scheme=https;' +
-                    'package=com.google.android.apps.bard;' +
-                    'S.browser_fallback_url=' + encodeURIComponent(url) + ';' +
+                    'package=com.google.android.googlequicksearchbox;' +
                     'end';
-                window.location.href = intent;
+
+                setTimeout(function() {
+                    window.location.href = intent;
+                }, 400);
+
+            } else if (isIOS()) {
+                // iOS: direct navigation triggers Universal Links if app is installed
+                setTimeout(function() {
+                    window.location.href = gemUrl();
+                }, 400);
 
             } else {
                 window.location.href = gemUrl();
+                return;
             }
+
+            // Show buttons after 3 seconds as fallback
+            setTimeout(showFallback, 3000);
+        }
+
+        function showFallback() {
+            if (document.hidden) return;
+            document.getElementById('spinner').style.display = 'none';
+            document.getElementById('status').textContent = 'בחר איך לפתוח:';
+            document.getElementById('status').style.animation = 'none';
+            document.getElementById('status').style.opacity = '0.8';
+            document.getElementById('btn1').classList.add('show');
+            document.getElementById('btn2').classList.add('show');
+            document.getElementById('btn3').classList.add('show');
+            document.getElementById('tip').innerHTML = '💡 לחוויה הטובה ביותר, פתח באפליקציית Gemini';
+            document.getElementById('tip').classList.add('show');
+        }
+
+        function openInApp() {
+            if (isAndroid()) {
+                // Try intent without fallback - forces app or Play Store
+                var intent = 'intent://gemini.google.com/gem/' + agent.gem +
+                    '#Intent;' +
+                    'scheme=https;' +
+                    'package=com.google.android.googlequicksearchbox;' +
+                    'end';
+                window.location.href = intent;
+            } else {
+                window.location.href = gemUrl();
+            }
+        }
+
+        function openInBrowser() {
+            window.location.href = gemUrl();
         }
 
         function openStore() {
